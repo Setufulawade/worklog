@@ -1,0 +1,55 @@
+.TH WORKLOG 1 "2026" "worklog 0.1.0" "User Commands"
+.SH NAME
+worklog \- daily work journal with AI reports and PowerPoint export
+.SH SYNOPSIS
+.B worklog
+.RI [ command ]
+.RI [ options ]
+.SH DESCRIPTION
+.B worklog
+keeps a plain-text journal, one file per day, one log entry per line.
+Run it with no arguments to add today's logs interactively.
+.SH COMMANDS
+.TP
+.B add [\-d DATE] [TEXT...]
+Add entries. With TEXT, adds one entry; without, prompts line by line (empty line to finish).
+DATE may be YYYY\-MM\-DD, DD\-MM\-YYYY, today, yesterday, or an offset such as \-2.
+.TP
+.B view [\-d DATE]
+Show the entries of a day.
+.TP
+.B edit [\-d DATE]
+Edit a day in $VISUAL / $EDITOR.
+.TP
+.B calendar [YYYY\-MM]
+Interactive month calendar. Arrow keys move, n/p change month, Enter views a day,
+e edits it, a adds entries, t jumps to today, q quits. Days with entries are marked with *.
+.TP
+.B report weekly|monthly|yearly [\-p PERIOD] [\-o FILE]
+Generate a detailed AI report in Markdown. PERIOD is this, last, YYYY\-Www (weekly),
+YYYY\-MM (monthly) or YYYY (yearly). Without \-o the report is saved under the data directory.
+.TP
+.B ppt weekly|monthly|yearly [\-p PERIOD] [\-o FILE] [\-\-no\-ai]
+Create a PowerPoint (.pptx) deck. Needs python3\-pptx. With \-\-no\-ai the slides are built
+directly from the logs and no API call is made.
+.TP
+.B config show|set KEY VALUE|path
+Keys: provider (anthropic or openai), model, api_key, base_url, max_tokens.
+.SH ENVIRONMENT
+.TP
+.B WORKLOG_API_KEY, ANTHROPIC_API_KEY, OPENAI_API_KEY
+API key; overrides the key stored in the config file.
+.TP
+.B WORKLOG_HOME
+Store data and config in this directory instead of the XDG locations.
+.SH FILES
+.TP
+.I ~/.local/share/worklog/logs/YYYY/YYYY\-MM\-DD.txt
+The daily logs.
+.TP
+.I ~/.config/worklog/config.json
+Settings (mode 600).
+.SH NOTES
+Reports and AI-built slides send the relevant log text to the configured AI provider.
+.SH LICENSE
+MIT

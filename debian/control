@@ -1,0 +1,18 @@
+Source: worklog
+Section: utils
+Priority: optional
+Maintainer: Your Name <you@example.com>
+Build-Depends: debhelper-compat (= 13), dh-python, pybuild-plugin-pyproject, python3-all, python3-setuptools
+Standards-Version: 4.6.2
+Homepage: https://example.com/worklog
+Rules-Requires-Root: no
+
+Package: worklog
+Architecture: all
+Depends: ${python3:Depends}, ${misc:Depends}
+Recommends: python3-pptx
+Description: daily work journal with AI reports and PowerPoint export
+ worklog keeps a plain-text journal in your terminal: add entries line by
+ line for today or any past day, browse a calendar to view or edit a day,
+ and use your own AI API key to generate weekly, monthly and yearly reports
+ or PowerPoint decks from what you logged.
