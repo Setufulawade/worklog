@@ -77,6 +77,12 @@ Use `ppt --no-ai` to keep everything local.
 
 Back up or sync the `worklog` data folder with anything you like (git, Syncthing, rsync).
 
+## Documentation
+
+Full engineering documentation is in [`docs/`](docs/README.md): architecture and request flows,
+the data model and on-disk formats, a complete CLI reference, the development and packaging
+guide, the testing strategy, security and privacy notes, and the design decision records.
+
 ## How it works (for contributors)
 
 `worklog` is pure standard-library Python (3.9+); `python-pptx` is only imported when you
