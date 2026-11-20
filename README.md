@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-automate worklog
-=======
 # worklog
 
 A daily work journal for the Linux terminal, with AI-written reports and PowerPoint export.
@@ -80,6 +77,35 @@ Use `ppt --no-ai` to keep everything local.
 
 Back up or sync the `worklog` data folder with anything you like (git, Syncthing, rsync).
 
+## How it works (for contributors)
+
+`worklog` is pure standard-library Python (3.9+); `python-pptx` is only imported when you
+create a `.pptx`. Nothing else is needed to run or test the tool.
+
+| Module | Responsibility |
+|---|---|
+| `worklog/cli.py` | argparse command surface, dispatch, interactive `add` prompts |
+| `worklog/storage.py` | the data layer: one plain-text file per day (`logs/YYYY/YYYY-MM-DD.txt`) |
+| `worklog/dates.py` | date parsing and week/month/year period resolution (`RANGES`) |
+| `worklog/config.py` | `config.json`, XDG paths, env-var API key lookup, masking |
+| `worklog/calendar_ui.py` | curses month calendar, day viewer, `$EDITOR` integration |
+| `worklog/reports.py` | stats, prompt building, report and deck generation |
+| `worklog/ai.py` | raw `urllib` calls to Anthropic or any OpenAI-compatible API |
+| `worklog/pptx_gen.py` | slide rendering with python-pptx |
+
+Flow: a command resolves a date or period, `storage` reads the day files under
+`data_dir()`, and — only for AI features — `reports` turns the entries plus computed stats
+into a prompt for `ai.complete()`. Yearly reports first condense each month into a digest so
+the final prompt stays within the context window.
+
+Run the tests with:
+
+```sh
+python -m unittest discover -s tests -v
+```
+
+Tests point `WORKLOG_HOME` at a temporary directory, so they never touch your real logs.
+
 ## Building the package
 
 ```sh
@@ -105,4 +131,3 @@ A `.deb` alone is not "in apt". Pick one:
 ## License
 
 MIT
->>>>>>> 994d6f3 (feat: add interactive month calendar and CLI for worklog management)
