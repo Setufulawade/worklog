@@ -5,7 +5,7 @@ A daily work journal for the Linux terminal, with AI-written reports and PowerPo
 ## Install
 
 ```sh
-sudo apt install ./worklog_0.1.0_all.deb     # or, once published: sudo apt install worklog
+sudo apt install ./worklog_0.2.0_all.deb     # or, once published: sudo apt install worklog
 sudo apt install python3-pptx                # only needed for PPT export (installed automatically if "Recommends" are on)
 ```
 
@@ -17,6 +17,11 @@ worklog add "Fixed login bug"    # add a single entry
 worklog add -d yesterday         # add logs for another day (interactive)
 worklog add -d 2026-11-03 "Sprint planning"
 worklog view -d 2026-11-03       # show a day
+worklog view --year 2026         # show every logged day in a year, grouped by month
+worklog view -y 2026 --summary   # just the monthly totals for a year
+worklog year                     # this year at a glance
+worklog year 2026 --summary --report   # year totals + the AI yearly report
+worklog year last --ppt --no-ai  # last year's deck, built from your logs
 worklog edit -d 2026-11-03       # edit a day in $EDITOR
 worklog calendar                 # browse a month, pick a day to view / edit / add
 ```
@@ -46,6 +51,7 @@ worklog config set api_key YOUR_KEY          # stored in ~/.config/worklog/confi
 worklog report weekly                        # this week
 worklog report monthly -p last               # last month
 worklog report yearly  -p 2026 -o 2026.md    # a whole year
+worklog year 2026 --report                   # same report, from the year view
 
 worklog ppt weekly                           # worklog-weekly-<period>.pptx in the current folder
 worklog ppt monthly -p 2026-10 -o oct.pptx
@@ -107,7 +113,7 @@ the final prompt stays within the context window.
 Run the tests with:
 
 ```sh
-python -m unittest discover -s tests -v
+python3 -m unittest discover -s tests -v
 ```
 
 Tests point `WORKLOG_HOME` at a temporary directory, so they never touch your real logs.
@@ -115,7 +121,7 @@ Tests point `WORKLOG_HOME` at a temporary directory, so they never touch your re
 ## Building the package
 
 ```sh
-./build-deb.sh            # -> dist/worklog_0.1.0_all.deb  (needs only dpkg-deb)
+./build-deb.sh            # -> dist/worklog_0.2.0_all.deb  (needs only dpkg-deb)
 ```
 
 Set your name first: `DEB_MAINTAINER="Jane Doe <jane@example.com>" ./build-deb.sh`

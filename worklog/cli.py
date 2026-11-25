@@ -1,6 +1,7 @@
 """worklog command line interface."""
 
 import argparse
+import calendar
 import datetime as dt
 import re
 import sys
@@ -56,6 +57,11 @@ def cmd_add(args):
 
 
 def cmd_view(args):
+    if args.year is not None:
+        _view_year(args.year, summary=args.summary)
+        return
+    if args.summary:
+        raise SystemExit("--summary can only be used with --year.")
     d = parse_date(args.date)
     lines = storage.read_day(d)
     print(f"{d:%A, %d %B %Y}")
@@ -64,6 +70,46 @@ def cmd_view(args):
         return
     for i, ln in enumerate(lines, 1):
         print(f"  {i:>2}. {ln}")
+
+
+def _days_word(n):
+    return f"{n} " + ("day" if n == 1 else "days")
+
+
+def _entries_word(n):
+    return f"{n} " + ("entry" if n == 1 else "entries")
+
+
+def _counts(n_days, n_entries):
+    return f"{_days_word(n_days)}, {_entries_word(n_entries)}"
+
+
+def _view_year(spec, summary=False):
+    from .dates import year_range
+
+    start, end, label = year_range(spec)
+    entries = storage.entries_between(start, end)
+    if not entries:
+        print(label)
+        print("  (no entries)")
+        return
+    total = sum(len(lines) for lines in entries.values())
+    print(f"{label}  ({_days_word(len(entries))} logged, {_entries_word(total)})")
+    print()
+
+    months = {}
+    for d, lines in entries.items():
+        months.setdefault(d.month, []).append((d, lines))
+    for month, items in months.items():
+        n_days = len(items)
+        n_entries = sum(len(lines) for _, lines in items)
+        print(f"{calendar.month_name[month]} {start.year}  ({_counts(n_days, n_entries)})")
+        if not summary:
+            for d, lines in items:
+                print(f"  {d:%Y-%m-%d} ({d:%A})")
+                for ln in lines:
+                    print(f"    - {ln}")
+        print()
 
 
 def cmd_edit(args):
@@ -86,33 +132,50 @@ def cmd_calendar(args):
     run(start)
 
 
-# --------------------------------------------------------- report / ppt
+# ------------------------------------------------ year shortcut / report / ppt
 
-def cmd_report(args):
+def cmd_year(args):
+    if args.no_ai and not args.ppt:
+        raise SystemExit("--no-ai can only be used with --ppt.")
+    if args.output and not (args.report or args.ppt):
+        raise SystemExit("--output requires --report or --ppt.")
+    _view_year(args.period, summary=args.summary)
+    if args.report:
+        _write_report("yearly", args.period, args.output)
+    elif args.ppt:
+        _build_ppt("yearly", args.period, args.output, args.no_ai)
+
+
+def _write_report(kind, period=None, output=None):
     from . import reports
 
-    label, md = reports.generate_report(args.kind, args.period, progress=_progress)
-    if args.output:
-        out = Path(args.output)
-    else:
-        out = storage.data_dir() / "reports" / f"{args.kind}-{_slug(label)}.md"
+    label, md = reports.generate_report(kind, period, progress=_progress)
+    out = Path(output) if output else storage.data_dir() / "reports" / f"{kind}-{_slug(label)}.md"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(md, encoding="utf-8")
     print(md)
     print(f"[saved to {out}]", file=sys.stderr)
 
 
-def cmd_ppt(args):
+def cmd_report(args):
+    _write_report(args.kind, args.period, args.output)
+
+
+def _build_ppt(kind, period=None, output=None, no_ai=False):
     from . import pptx_gen, reports
 
-    if args.no_ai:
-        label, stats, _entries, deck = reports.raw_deck(args.kind, args.period)
+    if no_ai:
+        label, stats, _entries, deck = reports.raw_deck(kind, period)
     else:
-        label, stats, _entries, deck = reports.generate_deck_content(args.kind, args.period, progress=_progress)
-    out = Path(args.output) if args.output else Path.cwd() / f"worklog-{args.kind}-{_slug(label)}.pptx"
+        label, stats, _entries, deck = reports.generate_deck_content(kind, period, progress=_progress)
+    out = Path(output) if output else Path.cwd() / f"worklog-{kind}-{_slug(label)}.pptx"
     out.parent.mkdir(parents=True, exist_ok=True)
-    count = pptx_gen.build(out, label, stats, deck, args.kind)
+    count = pptx_gen.build(out, label, stats, deck, kind)
     print(f"Created {out}  ({count} slides)")
+
+
+def cmd_ppt(args):
+    _build_ppt(args.kind, args.period, args.output, args.no_ai)
 
 
 # --------------------------------------------------------------- config
@@ -164,9 +227,25 @@ def build_parser():
     a.add_argument("text", nargs="*", help="a single entry; omit for interactive mode")
     a.set_defaults(func=cmd_add)
 
-    v = sub.add_parser("view", help="show the entries of a day")
-    v.add_argument("-d", "--date", default="today")
+    v = sub.add_parser("view", help="show the entries of a day or a whole year")
+    vd = v.add_mutually_exclusive_group()
+    vd.add_argument("-d", "--date", help="date: YYYY-MM-DD, DD-MM-YYYY, yesterday, -2 ... (default: today)")
+    vd.add_argument("-y", "--year", nargs="?", const="this",
+                    help="show a whole year: this, last or YYYY (default: this)")
+    v.add_argument("--summary", action="store_true",
+                   help="with --year: print only the monthly totals")
     v.set_defaults(func=cmd_view)
+
+    yr = sub.add_parser("year", aliases=["yr"],
+                        help="year at a glance; optionally build the yearly report or deck")
+    yr.add_argument("period", nargs="?", default="this", help="this (default), last or YYYY")
+    yr.add_argument("--summary", action="store_true", help="print only the monthly totals")
+    yg = yr.add_mutually_exclusive_group()
+    yg.add_argument("--report", action="store_true", help="also write the AI yearly report")
+    yg.add_argument("--ppt", action="store_true", help="also build the yearly PowerPoint deck")
+    yr.add_argument("--no-ai", action="store_true", help="with --ppt: build slides from your logs, no API call")
+    yr.add_argument("-o", "--output", help="path for the report (.md) or the deck (.pptx)")
+    yr.set_defaults(func=cmd_year)
 
     e = sub.add_parser("edit", help="edit a day in $EDITOR")
     e.add_argument("-d", "--date", default="today")

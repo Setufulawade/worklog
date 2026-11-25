@@ -1,4 +1,4 @@
-.TH WORKLOG 1 "2026" "worklog 0.1.0" "User Commands"
+.TH WORKLOG 1 "2026" "worklog 0.2.0" "User Commands"
 .SH NAME
 worklog \- daily work journal with AI reports and PowerPoint export
 .SH SYNOPSIS
@@ -15,8 +15,13 @@ Run it with no arguments to add today's logs interactively.
 Add entries. With TEXT, adds one entry; without, prompts line by line (empty line to finish).
 DATE may be YYYY\-MM\-DD, DD\-MM\-YYYY, today, yesterday, or an offset such as \-2.
 .TP
-.B view [\-d DATE]
-Show the entries of a day.
+.B view [\-d DATE] | [\-y [YEAR]] [\-\-summary]
+Show the entries of a day, or with \-y a whole year grouped by month (YEAR: this, last, YYYY).
+\-\-summary with \-y prints only the monthly totals.
+.TP
+.B year [PERIOD] [\-\-summary] [\-\-report | \-\-ppt] [\-\-no\-ai] [\-o FILE]
+Shortcut for the year view (PERIOD: this, last, YYYY; default this). \-\-report also writes the
+yearly AI report, and \-\-ppt also builds the yearly deck (\-\-no\-ai skips the API call).
 .TP
 .B edit [\-d DATE]
 Edit a day in $VISUAL / $EDITOR.

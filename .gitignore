@@ -1,0 +1,26 @@
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+
+# Build output from ./build-deb.sh
+build/
+dist/
+*.deb
+
+# Build output from dpkg-buildpackage / debhelper
+debian/files
+debian/*.substvars
+debian/*.debhelper.log
+debian/debhelper-build-stamp
+debian/.debhelper/
+debian/worklog/
+
+# Editor and OS noise
+.DS_Store
+*.swp

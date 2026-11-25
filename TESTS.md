@@ -18,10 +18,13 @@ python3 -m unittest discover -s tests -v
 Expected result:
 
 ```
-Ran 29 tests in 0.009s
+Ran 45 tests in 0.009s
 
 OK
 ```
+
+One test is skipped when `python-pptx` is not installed (`--ppt` is still built and checked;
+the test is the only part that needs the library).
 
 If you see `python: command not found`, use `python3` (some systems do not provide a
 `python` executable), or activate the virtualenv you installed the package into.
@@ -63,10 +66,12 @@ python3 -m unittest discover -s tests -k month  # only tests with "month" in the
 | File | Tests |
 |---|---|
 | `tests/test_dates.py` | `parse_date` (`today`, `yesterday`, `-3`, `YYYY-MM-DD`, `DD-MM-YYYY`, `DD/MM/YYYY`, bad input), `week_range` (ISO weeks, `last`, `YYYY-Www`, any date inside a week), `month_range` (`this`, `last` across a year boundary, December rollover, bad spec), `year_range`, `daterange` |
-| `tests/test_storage.py` | day-file path layout, append/read round-trip, blank-line filtering, `write_day` replacement, empty writes deleting the file, `days_with_logs` month scoping and stray-file tolerance, `entries_between` ordering, `format_entries` output |
+| `tests/test_storage.py` | day-file path layout, append/read round-trip, blank-line filtering, `write_day` replacement, empty writes deleting the file, `days_with_logs` month and year scoping, stray-file tolerance, `entries_between` ordering, `format_entries` output |
+| `tests/test_cli.py` | `view` day output, `view --year` grouping and `--summary`, the `year` shortcut (view, summary, `--report`, `--ppt --no-ai`, argument guards) |
+| `tests/test_reports.py` | the yearly path: one digest call per logged month, month caps in the no-AI deck, empty-year errors |
 
-Not covered by tests: the CLI argument parsing, the curses calendar, and the AI/PPT
-pipelines (they need a terminal, an API key, or `python-pptx`).
+Not covered by tests: the curses calendar, live calls to an AI provider (the CLI tests stub
+`reports.ai.complete`), and the default AI deck path when `python-pptx` is absent.
 
 ## How isolation works
 

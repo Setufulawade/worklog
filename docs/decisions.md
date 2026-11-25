@@ -181,7 +181,7 @@ intended behaviour.
 
 ## ADR-011 — No formatter, linter or CI configuration
 
-**Context.** The project is ~1,100 lines with one maintainer and no build server.
+**Context.** The project is ~1,250 lines with one maintainer and no build server.
 
 **Decision.** No `black`/`ruff`/`flake8` config, no `.github/workflows`. Style is maintained by
 consistency with the existing files; the only automated check is the `unittest` suite.
@@ -201,7 +201,7 @@ change history for a cosmetic gain).
 **Decision.** Keep both: `build-deb.sh` (POSIX `sh`, `dpkg-deb` only, works on any Debian-ish
 host) and `debian/` (`debhelper-compat 13`, `pybuild`) for `dpkg-buildpackage`. `__version__` in
 `worklog/__init__.py` is the source of truth: `build-deb.sh` parses it with `sed`, while
-`pyproject.toml` repeats it statically and `debian/changelog` carries the `0.1.0-1` revision.
+`pyproject.toml` repeats it statically and `debian/changelog` carries the `0.2.0-1` revision.
 
 **Consequences.** Some duplication — the package description appears in `build-deb.sh`,
 `debian/control` and `pyproject.toml` — and a release must update `debian/changelog` separately.

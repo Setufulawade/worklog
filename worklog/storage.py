@@ -56,13 +56,16 @@ def append_lines(d, new_lines):
     return len(new_lines)
 
 
-def days_with_logs(year, month):
-    """Return {date: entry_count} for every logged day in a month."""
+def days_with_logs(year, month=None):
+    """Return {date: entry_count} for every logged day in a month.
+
+    With month=None, scan the whole year instead.
+    """
     folder = data_dir() / "logs" / f"{year:04d}"
     out = {}
     if not folder.exists():
         return out
-    prefix = f"{year:04d}-{month:02d}-"
+    prefix = f"{year:04d}-" if month is None else f"{year:04d}-{month:02d}-"
     for f in folder.glob(f"{prefix}*.txt"):
         try:
             d = dt.date.fromisoformat(f.stem)

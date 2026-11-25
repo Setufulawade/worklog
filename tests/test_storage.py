@@ -70,6 +70,17 @@ class StorageTest(unittest.TestCase):
             found, {dt.date(2026, 11, 2): 2, dt.date(2026, 11, 20): 1}
         )
 
+    def test_days_with_logs_scoped_to_year(self):
+        storage.write_day(dt.date(2026, 1, 2), ["a"])
+        storage.write_day(dt.date(2026, 11, 20), ["b", "c"])
+        storage.write_day(dt.date(2025, 12, 31), ["old"])
+        storage.write_day(dt.date(2027, 1, 1), ["new"])
+
+        self.assertEqual(
+            storage.days_with_logs(2026),
+            {dt.date(2026, 1, 2): 1, dt.date(2026, 11, 20): 2},
+        )
+
     def test_days_with_logs_ignores_stray_files(self):
         folder = self.root / "logs" / "2026"
         folder.mkdir(parents=True)
@@ -78,6 +89,7 @@ class StorageTest(unittest.TestCase):
 
     def test_days_with_logs_missing_year(self):
         self.assertEqual(storage.days_with_logs(1999, 1), {})
+        self.assertEqual(storage.days_with_logs(1999), {})
 
     def test_entries_between_skips_empty_days_and_sorts(self):
         storage.write_day(dt.date(2026, 11, 3), ["third"])

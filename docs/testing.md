@@ -10,7 +10,8 @@ reasoning, the current state and the gaps.
 
 - Framework: `unittest` (standard library)
 - Location: `tests/`
-- Current suite: **29 tests**, ~0.01 s, no network, no terminal, no optional packages
+- Current suite: **45 tests**, ~0.1 s, no network, no terminal. `python-pptx` is the only
+  optional package, and without it a single test is skipped rather than the suite failing
 
 ---
 
@@ -39,7 +40,7 @@ the day the suite runs.
 The fixed reference date in the file is `TODAY = dt.date(2026, 11, 20)`, chosen so the `last`
 cases exercise a year boundary (January) and a month boundary at the same time.
 
-### `tests/test_storage.py` — 13 tests
+### `tests/test_storage.py` — 14 tests
 
 | Test | Pins down |
 |---|---|
@@ -50,12 +51,45 @@ cases exercise a year boundary (January) and a month boundary at the same time.
 | `test_write_day_replaces_contents` | Whole-file semantics, no leftover lines |
 | `test_writing_nothing_deletes_the_file` | `write_day(d, [])` unlinks — the "day exists iff it has entries" invariant |
 | `test_days_with_logs_scoped_to_month` | Only the requested month, with correct entry counts |
+| `test_days_with_logs_scoped_to_year` | Omitting the month scans the whole year, so the year view sees every logged day |
 | `test_days_with_logs_ignores_stray_files` | `notes.txt` and bad stems are skipped, not crashed on |
 | `test_days_with_logs_missing_year` | Missing year folder → `{}` |
 | `test_entries_between_skips_empty_days_and_sorts` | Empty days absent; keys ascending |
 | `test_format_entries` | Header format `YYYY-MM-DD (Weekday)` and `  - entry` bullets |
 | `test_format_entries_empty` | `{}` → `""` (so the prompt builder never emits a dangling header) |
 | `test_config_dir_follows_home_override` | `WORKLOG_HOME` relocates the config dir too, not just the data dir |
+
+### `tests/test_cli.py` — 11 tests
+
+These call `cli.main([...])` directly with `contextlib.redirect_stdout`, so they assert on the
+text a user would see rather than on helper return values. `WORKLOG_HOME` again points at a
+temporary directory.
+
+| Test | Pins down |
+|---|---|
+| `test_view_day` | Day header (`Tuesday, 06 January 2026`) and the right-aligned numbering |
+| `test_view_year_groups_by_month` | Year header totals, month headers, chronological month order, indented entries |
+| `test_view_year_summary_prints_only_totals` | `--summary` keeps headers and drops every entry line |
+| `test_view_year_without_entries` | An empty year prints just the label and `(no entries)` |
+| `test_summary_requires_year` | `view --summary` without `-y` raises `SystemExit` with its message |
+| `test_year_shortcut_shows_year_view` | `year YYYY` prints the same view as `view -y` |
+| `test_year_shortcut_summary` | The `yr` alias honours `--summary` |
+| `test_year_shortcut_writes_report` | `--report -o FILE` writes the Markdown (AI stubbed) and prints it |
+| `test_year_shortcut_builds_deck_without_ai` | `--ppt --no-ai -o FILE` creates a non-empty deck; skipped without `python-pptx` |
+| `test_year_shortcut_rejects_no_ai_without_ppt` | `--no-ai` needs `--ppt` |
+| `test_year_shortcut_rejects_output_without_artifact` | `-o` needs `--report` or `--ppt` |
+
+### `tests/test_reports.py` — 4 tests
+
+The yearly path is the only multi-call flow, so it gets its own fixture year (January and
+March only). `reports.ai.complete` is replaced with a `mock` side effect that records prompts.
+
+| Test | Pins down |
+|---|---|
+| `test_yearly_report_condenses_each_logged_month` | Exactly three calls (two digests + final), digests only for months with entries |
+| `test_yearly_report_without_entries_raises` | Empty year raises `ValueError` before any API call |
+| `test_yearly_raw_deck_has_one_slide_per_logged_month` | `--no-ai` deck titles are the logged months in order, stats match |
+| `test_yearly_raw_deck_caps_month_bullets` | Six bullets plus an `...and N more entries` line |
 
 ## 3. Isolation
 
@@ -89,12 +123,13 @@ threads. The suite is serial by design; do not add concurrency to the runner.
 | Area | Reason | Risk if it breaks | Cheap mitigation |
 |---|---|---|---|
 | `cli.py` argument parsing and dispatch | Mostly declarative `argparse` wiring; testing it would assert on help strings | A renamed flag or wrong default | `worklog <cmd> --help` in a smoke test |
-| `cli.py` output formatting (`view` numbering, confirmation text) | Cosmetic | Cosmetic | Manual check |
+| `cli.py` `add`/`edit` output and interactive prompts | Needs stdin/TTY; `view` and `year` output is covered | Cosmetic, or lost entries | Manual check in §6 |
 | `calendar_ui.py` | Requires a curses terminal and keystrokes; `curses.wrapper` cannot run in a pipe | Broken keybinding, garbled layout | Manual matrix in §6 |
 | `reports.compute_stats` | Pure, but currently untested | Wrong streak or busiest day in every report | **Best next test to add** — see §5 |
 | `reports._extract_json` / deck normalisation | Pure string → dict, but coupled to `ai.complete` | Crash on a model that wraps JSON in prose | Easy: test with fixture strings |
+| AI-built weekly/monthly decks | Same prompt plumbing as the yearly tests, but no assertions yet | Empty or malformed deck from a provider | Mock `ai.complete` and assert the slide count and titles |
 | `ai.py` | Needs a socket and a key | Provider contract drift | Test `_post` error mapping against a local HTTP server, or skip |
-| `pptx_gen.py` | Needs `python-pptx`; asserting on OOXML is brittle | Deck fails to open | Smoke test: build a deck in a temp dir, assert slide count |
+| `pptx_gen.py` | Needs `python-pptx`; asserting on OOXML is brittle | Deck fails to open | Smoke-tested via `test_year_shortcut_builds_deck_without_ai` (file exists and is non-empty); open a deck by hand to check layout |
 | `config.py` load/save/masking | Needs `WORKLOG_HOME`; straightforward | Key precedence bug, world-readable file | Easy to add alongside the storage tests |
 
 The gaps are deliberate scoping, not an endorsement. `compute_stats` and the config precedence
@@ -108,8 +143,11 @@ are the two highest-value additions because they are pure logic with silent fail
 3. If the code touches the filesystem, use the `WORKLOG_HOME`/`TemporaryDirectory` pattern from
    `StorageTest`; do not mock `storage` functions.
 4. Assert values, not printed text. If a message matters, assert on the exception type and a
-   substring, e.g. `with self.assertRaises(ValueError): …`.
-5. Run it: `python3 -m unittest discover -s tests -v`. Keep `tests/__init__.py` in place — the
+   substring, e.g. `with self.assertRaises(ValueError): …`. CLI tests are the deliberate
+   exception: they assert on the exact user-visible output (see `test_cli.py`).
+5. If the code path calls a provider, patch `reports.ai.complete` with `unittest.mock.patch`
+   and assert on the recorded prompts, as `test_reports.py` does. Never make a live call.
+6. Run it: `python3 -m unittest discover -s tests -v`. Keep `tests/__init__.py` in place — the
    dotted module paths in the docs depend on it.
 
 Sketch of the missing `compute_stats` test:
@@ -144,6 +182,7 @@ to the risk.
 | Interactive add | `worklog` (TTY) | Prompt per line; empty line ends; `Saved N entries` |
 | Stdin import | `printf 'a\nb\n' \| worklog add` | `Added 2 entries` |
 | Bad date | `worklog view -d banana` | `worklog: Could not understand date 'banana'.` exit 1 |
+| Year shortcut | `worklog year 2026 --summary` | Monthly totals only, exit 0 |
 | Empty period | `worklog report weekly -p 1999-W01` | `worklog: No log entries found for …` exit 1, no file |
 | No API key | `env -u WORKLOG_API_KEY -u ANTHROPIC_API_KEY -u OPENAI_API_KEY worklog report weekly` | Instructions to set a key, exit 1 |
 | Calendar without TTY | `worklog calendar \| cat` | `The calendar needs an interactive terminal.` |

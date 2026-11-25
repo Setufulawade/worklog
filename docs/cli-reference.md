@@ -16,7 +16,7 @@ interactive prompt. `worklog --help` and `worklog <command> --help` are generate
 
 | Option | Effect |
 |---|---|
-| `--version` | Print `worklog 0.1.0` and exit 0 |
+| `--version` | Print `worklog 0.2.0` and exit 0 |
 | `-h`, `--help` | Usage for the program or the current subcommand |
 
 ## Date arguments (`-d`, `--date`)
@@ -63,11 +63,62 @@ In modes 1 and 2 the confirmation goes to stdout; progress and other diagnostics
 ## `worklog view`
 
 ```
-worklog view [-d DATE]
+worklog view [-d DATE] | [-y [YEAR]] [--summary]
 ```
 
-Prints the weekday and long date, then a right-aligned number per line (`   1. entry`), or
-`  (no entries)`. Read-only: never creates a file, never rewrites one.
+`-d` and `-y` are mutually exclusive; with neither, it behaves like `-d today`.
+`--summary` requires `-y` and is rejected with `--summary can only be used with --year.`
+otherwise.
+
+**Day mode.** Prints the weekday and long date, then a right-aligned number per line
+(`   1. entry`), or `  (no entries)`.
+
+**Year mode** (`-y`, `--year`). `YEAR` accepts `this` (also the bare `-y`), `last` or `YYYY`.
+Prints a header with the number of logged days and entries, then each month with its day and
+entry counts, then every day's entries:
+
+```
+2026  (3 days logged, 3 entries)
+
+January 2026  (2 days, 2 entries)
+  2026-01-05 (Monday)
+    - Kickoff
+  2026-01-06 (Tuesday)
+    - Planning
+
+November 2026  (1 day, 1 entry)
+...
+```
+
+With `--summary`, the per-day lines are omitted and only the header and monthly totals are
+printed. A year with no entries prints just `  (no entries)` under the year label. Every mode
+is read-only: it never creates a file, never rewrites one.
+
+## `worklog year` (alias `yr`)
+
+```
+worklog year [PERIOD] [--summary] [--report | --ppt] [--no-ai] [-o FILE]
+```
+
+Shortcut for the year view: it prints exactly what `worklog view -y PERIOD` prints (`PERIOD` is
+`this` — also the default — `last` or `YYYY`), then optionally produces the yearly artifacts
+for the same period. `--summary` restricts the listing to the header and monthly totals, which
+pairs well with the artifact flags:
+
+```sh
+worklog year                                 # this year, full listing
+worklog year 2026 --summary --report         # monthly totals + the AI yearly report
+worklog year last --ppt --no-ai              # last year's deck, built locally
+worklog year 2026 --ppt -o review.pptx       # AI deck at an explicit path
+```
+
+`--report` and `--ppt` are mutually exclusive. Their outputs and defaults are the same as
+`worklog report yearly` and `worklog ppt yearly`: `-o` overrides the path, otherwise the report
+lands in `<data_dir>/reports/yearly-<slug>.md` and the deck in
+`./worklog-yearly-<slug>.pptx`. `--no-ai` requires `--ppt`, and `-o` requires one of the two
+artifact flags; both are rejected with an `--no-ai can only be used with --ppt.` or
+`--output requires --report or --ppt.` message. A year with no entries prints the empty view,
+and a requested report still fails with `worklog: No log entries found for YEAR.`
 
 ## `worklog edit`
 
@@ -214,7 +265,7 @@ messages, which have no prefix). No tracebacks are shown for expected errors.
 | Command | Behaviour when piped |
 |---|---|
 | `add` (no TEXT) | Reads entries from stdin instead of prompting |
-| `view`, `report` | Plain stdout, suitable for `less`, `grep`, redirection |
+| `view`, `year`, `report` | Plain stdout, suitable for `less`, `grep`, redirection |
 | `edit` | Passes the terminal through to the editor; do not pipe |
 | `calendar` | Refuses to start |
 | `ppt` | No terminal needed |

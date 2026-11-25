@@ -7,7 +7,7 @@ user's XDG directories.
 This document describes how the code is organised, how data moves through it, and why the
 significant decisions were made.
 
-- Version described: `0.1.0`
+- Version described: `0.2.0`
 - Python: 3.9+
 - Runtime dependencies: none. `python-pptx` is imported lazily and only for `worklog ppt`.
 
@@ -68,9 +68,9 @@ Two rules keep the layering clean:
 |---|---|---|
 | `worklog/__init__.py` | 3 | Package metadata; the single source of truth for `__version__`, which `build-deb.sh` parses with `sed`. |
 | `worklog/__main__.py` | 5 | Enables `python -m worklog`. Five lines that call `cli.main()`. |
-| `worklog/cli.py` | 218 | `argparse` surface, subcommand dispatch, interactive `add` loop, stdin pipelining, exit codes, output paths. |
+| `worklog/cli.py` | 297 | `argparse` surface, subcommand dispatch, interactive `add` loop, stdin pipelining, the day/year views, the `year` shortcut, exit codes, output paths. |
 | `worklog/dates.py` | 94 | `parse_date` for human date input; `week_range` / `month_range` / `year_range` returning `(start, end, label)`; `RANGES` dispatch table; `daterange` generator. |
-| `worklog/storage.py` | 96 | Day-file path resolution, read/write/append, month scanning, range collection, prompt formatting. |
+| `worklog/storage.py` | 99 | Day-file path resolution, read/write/append, month/year scanning, range collection, prompt formatting. |
 | `worklog/config.py` | 60 | `config.json` load/save (mode 600), XDG path resolution, env-var key precedence, key masking. |
 | `worklog/calendar_ui.py` | 216 | `curses` month grid, day preview panel, full-screen viewer, multi-line add prompt, `$EDITOR` handoff. |
 | `worklog/reports.py` | 224 | Period stats, system/user prompt construction, yearly month digests, Markdown report assembly, JSON deck extraction, no-AI deck builder. |
@@ -159,6 +159,11 @@ cmd_ppt ──▶ --no-ai? ──yes──▶ reports.raw_deck()  (deterministic
 day, monthly groups by ISO week, yearly groups by month. Long lists are chunked 7 bullets per
 slide with a `(cont.)` title suffix.
 
+Both commands are thin wrappers: `cmd_report` delegates to `_write_report` and `cmd_ppt` to
+`_build_ppt`, and the `year` shortcut calls the same two helpers after printing the year view.
+That keeps one default output location and one save/print policy per artifact regardless of
+which command asked for it.
+
 ## 5. Data model
 
 Full detail is in [data-model.md](data-model.md). In brief:
@@ -192,7 +197,7 @@ to propagate.
 
 | To add… | Touch |
 |---|---|
-| A new subcommand | `cli.build_parser()` (subparser + `set_defaults(func=…)`), plus a `cmd_*` function |
+| A new subcommand | `cli.build_parser()` (subparser + `set_defaults(func=…)`), plus a `cmd_*` function — `cmd_year` is a compact example of a shortcut that reuses existing handlers |
 | A new date/period format | `dates.parse_date`, or one of the three `*_range` functions |
 | A new period kind (e.g. quarterly) | A range function, an entry in `dates.RANGES`, entries in `reports.REPORT_GUIDE`, `reports.DECK_GUIDE`, plus the `choices=[…]` in the two subparsers |
 | A new AI provider | `config.PROVIDER_DEFAULT_MODEL`, `config.ENV_KEYS`, a branch in `ai.complete`, and the validation string in `cmd_config` |

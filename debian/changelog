@@ -1,3 +1,13 @@
+worklog (0.2.0-1) unstable; urgency=medium
+
+  * New `worklog view --year [this|last|YYYY]` to see monthly totals for a
+    whole year, with `--summary` for totals only.
+  * New `worklog year` shortcut that opens the year view and can build the
+    yearly report (`--report`) or PowerPoint deck (`--ppt`).
+  * Document the year view and the shortcut.
+
+ -- Your Name <you@example.com>  Wed, 25 Nov 2026 12:08:40 +0530
+
 worklog (0.1.0-1) unstable; urgency=medium
 
   * Initial release.

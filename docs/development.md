@@ -30,6 +30,7 @@ There is no build step and no install step for development:
 git clone <repo> worklog && cd worklog
 python3 -m worklog                      # interactive add for today
 python3 -m worklog view -d yesterday
+python3 -m worklog year 2026 --summary
 python3 -m worklog report weekly -p last
 ```
 
@@ -63,8 +64,8 @@ worklog --version
 
 ```
 worklog/
-├── worklog/            the package (10 modules, ~1,150 lines)
-├── tests/              unittest suite (dates, storage)
+├── worklog/            the package (10 modules, ~1,240 lines)
+├── tests/              unittest suite (dates, storage, CLI output, yearly reports)
 ├── docs/               this documentation set
 ├── packaging/          worklog.1 man page, copyright for the .deb
 ├── debian/             packaging for dpkg-buildpackage / PPA
@@ -176,7 +177,7 @@ Two independent paths exist.
 
 ```sh
 ./build-deb.sh
-# -> dist/worklog_0.1.0_all.deb
+# -> dist/worklog_0.2.0_all.deb
 ```
 
 The script is a single POSIX `sh` file with `set -eu`. It:
@@ -196,8 +197,8 @@ Set the maintainer before building:
 
 ```sh
 DEB_MAINTAINER="Jane Doe <jane@example.com>" ./build-deb.sh
-dpkg-deb -I dist/worklog_0.1.0_all.deb     # inspect control
-dpkg-deb -c dist/worklog_0.1.0_all.deb     # inspect contents
+dpkg-deb -I dist/worklog_0.2.0_all.deb     # inspect control
+dpkg-deb -c dist/worklog_0.2.0_all.deb     # inspect contents
 ```
 
 `Recommends: python3-pptx` is a recommend rather than a dependency on purpose: PPT export is
@@ -215,11 +216,11 @@ python3-setuptools`. Format is `3.0 (native)`.
 
 ```sh
 dpkg-buildpackage -S -us -uc       # source package for a PPA
-dput ppa:<user>/worklog ../worklog_0.1.0-1_source.changes
+dput ppa:<user>/worklog ../worklog_0.2.0-1_source.changes
 ```
 
 Keep `debian/changelog` and `__version__` in step; `debian/changelog` uses the
-`0.1.0-1`-style Debian revision while the Python package uses the bare `0.1.0`.
+`0.2.0-1`-style Debian revision while the Python package uses the bare `0.2.0`.
 
 ## 7. Release checklist
 

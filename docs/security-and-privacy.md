@@ -10,11 +10,12 @@ what is stored, and which risks are accepted.
 
 | Command | Network activity | What is sent |
 |---|---|---|
-| `worklog`, `add`, `view`, `edit`, `calendar` | none | — |
+| `worklog`, `add`, `view`, `year` (view only), `edit`, `calendar` | none | — |
 | `worklog config show/path/set` | none | — |
 | `worklog ppt --no-ai` | none | — |
 | `worklog report weekly\|monthly\|yearly` | one POST per report (yearly: one per non-empty month, then one final POST) | The full text of the period's entries, plus computed stats and the period label |
 | `worklog ppt` (without `--no-ai`) | one POST | The same period text and stats |
+| `worklog year --report` / `worklog year --ppt` | exactly what the equivalent `report yearly` / `ppt yearly` sends | Same as above; `year --ppt --no-ai` stays local |
 
 The destination is `cfg["base_url"]` if set, otherwise:
 
