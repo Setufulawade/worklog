@@ -201,6 +201,72 @@ dpkg-deb -I dist/worklog_0.2.0_all.deb     # inspect control
 dpkg-deb -c dist/worklog_0.2.0_all.deb     # inspect contents
 ```
 
+### Installing, upgrading and removing
+
+```sh
+sudo apt install ./dist/worklog_0.2.0_all.deb   # apt resolves Depends and Recommends
+dpkg -l worklog                                 # ii  worklog  0.2.0  all  ...
+worklog --version                               # worklog 0.2.0
+man worklog                                     # from packaging/worklog.1
+```
+
+An upgrade is the same command with the newer file; `apt` replaces the installed copy in place,
+so no `purge` is needed between versions:
+
+```sh
+./build-deb.sh                                  # after bumping the version, see §7
+sudo apt install ./dist/worklog_0.2.1_all.deb
+```
+
+Removal is ordinary `apt`, and never touches your logs:
+
+```sh
+sudo apt remove worklog     # keeps ~/.local/share/worklog
+sudo apt purge worklog      # also removes /usr/share/doc/worklog
+```
+
+`postrm` deletes only the `__pycache__` written into
+`/usr/lib/python3/dist-packages/worklog/`. Your data lives under `storage.data_dir()` and no
+package script reads or writes it.
+
+#### Name collision with Ubuntu's `worklog`
+
+Ubuntu ships an unrelated package with the same name — `worklog 2.1-1build1`, "Keep Track of Time
+worked on Projects", a compiled C binary — and it owns `/usr/bin/worklog`. Because both packages
+are called `worklog`, `apt` compares versions and refuses a local `0.x` file as a *downgrade*;
+forcing it with `--allow-downgrades` would delete the other program's `/usr/bin/worklog`. Purge
+the other package first:
+
+```sh
+dpkg -S /usr/bin/worklog     # confirm which package owns the path
+sudo apt purge worklog       # Priority: optional, no reverse dependencies
+sudo apt install ./dist/worklog_0.2.0_all.deb
+```
+
+The two are mutually exclusive afterwards: `sudo apt install worklog` from the archive would
+remove this package again. To keep both installed, build under a different `Package:` name and
+shim name instead of `/usr/bin/worklog`.
+
+#### Harmless apt notices
+
+`Download is performed unsandboxed as root as file '...deb' couldn't be accessed by user '_apt'`
+means `_apt` cannot read your home directory, so `apt` copied the local file itself. The install
+still succeeds; only that `Get:` line differs.
+
+#### Trying changes without installing
+
+```sh
+python3 -m worklog --version                          # the working tree, no install
+WORKLOG_HOME=/tmp/wltest python3 -m worklog add       # scratch data and config
+```
+
+To exercise exactly what the deb ships, unpack it and run the packaged modules:
+
+```sh
+dpkg-deb -x dist/worklog_0.2.0_all.deb /tmp/wlcheck
+PYTHONPATH=/tmp/wlcheck/usr/lib/python3/dist-packages python3 -m worklog --version
+```
+
 `Recommends: python3-pptx` is a recommend rather than a dependency on purpose: PPT export is
 optional, and a hard dependency would pull a heavier package onto systems that only journal.
 
@@ -225,13 +291,20 @@ Keep `debian/changelog` and `__version__` in step; `debian/changelog` uses the
 ## 7. Release checklist
 
 1. `python3 -m unittest discover -s tests -v` — all green.
-2. Bump `__version__`; add a `debian/changelog` entry if packaging.
-3. Update `README.md`, `docs/cli-reference.md` and `packaging/worklog.1` for any CLI change.
-4. `./build-deb.sh`, then smoke-test the built package in a container or VM:
-   `dpkg -i`, `worklog --version`, `worklog add`, `worklog view`, `worklog calendar`.
-5. Verify `python3-pptx`-absent behaviour if you touched the deck code: `worklog ppt weekly`
+2. Bump the version in three places: `worklog/__init__.py` (`__version__`, the source of truth for
+   `build-deb.sh`), `pyproject.toml`, and `debian/changelog` (new `<version>-1` entry on top).
+   Then sweep for stale numbers: `grep -rn '0\.2\.0' README.md docs packaging` and fix the ones
+   that describe the current release — `docs/decisions.md` and old changelog entries are
+   historical and stay as written.
+3. Update `README.md`, `docs/cli-reference.md` and `packaging/worklog.1` for any CLI change. Both
+   `README.md` and the man page are copied into the deb, so they must be current *before* §6.
+4. `./build-deb.sh`, then check the artifact itself: `dpkg-deb -f dist/worklog_<version>_all.deb
+   Package Version` and `dpkg-deb -c` for the file list.
+5. Install it (§6) and smoke-test: `worklog --version`, `worklog add`, `worklog view`,
+   `worklog year --summary`, `worklog calendar`.
+6. Verify `python3-pptx`-absent behaviour if you touched the deck code: `worklog ppt weekly`
    should print instructions, not a traceback.
-6. Tag the commit.
+7. Tag the commit.
 
 ## 8. Debugging notes
 
@@ -244,3 +317,6 @@ Keep `debian/changelog` and `__version__` in step; `debian/changelog` uses the
 | `API returned HTTP 401` | Key missing/expired, or an env var overriding the stored key — `worklog config show` shows the masked source value |
 | `API returned HTTP 404` with a custom `base_url` | The OpenAI branch appends `/chat/completions` to `base_url`; the URL should already end in `/v1` |
 | Slide text overflows | `_font_size` thresholds in `pptx_gen.py`; the AI sometimes returns long bullets despite the 18-word rule |
+| `apt install ./worklog_x.deb` refuses with "downgrade" | Another package named `worklog` owns `/usr/bin/worklog`; purge it first — see §6 |
+| `_apt` … "couldn't be accessed by user '_apt'" during install | Harmless; `$HOME` is not readable by `_apt`, so apt reads the local file as root. See §6 |
+| `worklog --version` prints `ERROR: cannot open project configuration file` | You are running the old C `worklog`; check `file -L $(command -v worklog)` — see §6 |

@@ -9,6 +9,10 @@ sudo apt install ./worklog_0.2.0_all.deb     # or, once published: sudo apt inst
 sudo apt install python3-pptx                # only needed for PPT export (installed automatically if "Recommends" are on)
 ```
 
+Upgrading is the same command with the newer file. Ubuntu also ships an unrelated package named
+`worklog`; if `apt` refuses the install, purge that one first — see
+[development.md §6](docs/development.md#6-packaging).
+
 ## Everyday use
 
 ```sh
@@ -122,10 +126,15 @@ Tests point `WORKLOG_HOME` at a temporary directory, so they never touch your re
 
 ```sh
 ./build-deb.sh            # -> dist/worklog_0.2.0_all.deb  (needs only dpkg-deb)
+sudo apt install ./dist/worklog_0.2.0_all.deb
 ```
 
+The version comes from `__version__` in `worklog/__init__.py`; `pyproject.toml` and
+`debian/changelog` carry the same number.
+
 Set your name first: `DEB_MAINTAINER="Jane Doe <jane@example.com>" ./build-deb.sh`
-and edit `packaging/copyright` and `debian/*`.
+and edit `packaging/copyright` and `debian/*`. Installing, upgrading, removing and the
+name-collision fix are in [development.md §6](docs/development.md#6-packaging).
 
 ## Publishing so anyone can `apt install worklog`
 
